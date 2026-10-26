@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Download JUnit standalone console launcher
+        run: |
+          curl -L -o junit-standalone.jar \
+            https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.2/junit-platform-console-standalone-1.10.2.jar
+
+      - name: Compile main sources
+        run: |
+          mkdir -p build/main build/test
+          javac -d build/main \
+            src/atlas/json/*.java src/atlas/protocol/*.java \
+            src/atlas/transport/*.java src/atlas/registry/*.java \
+            src/atlas/server/*.java src/atlas/examples/*.java \
+            src/atlas/examples/tools/*.java
+
+      - name: Compile tests
+        run: |
+          javac -cp "build/main:junit-standalone.jar" -d build/test src/test/atlas/*.java
+
+      - name: Run tests
+        run: |
+          java -cp "build/main:build/test:junit-standalone.jar" \
+            org.junit.platform.console.ConsoleLauncher --scan-class-path build/test
